@@ -1,0 +1,23 @@
+plugins {
+    id 'fabric-loom'
+}
+
+apply from: rootProject.file('build-logic/common.gradle')
+
+// Optional mod dependencies property
+ext {
+    modmenu_version = "7.2.2" // Optional can be remove or add
+}
+
+repositories {
+    maven {
+        name = "Terraformers"
+        url = "https://maven.terraformersmc.com/"
+    }
+}
+
+dependencies {
+    // Add or remove optional dependencies
+    modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+    modLocalRuntime "com.terraformersmc:modmenu:${modmenu_version}"
+}

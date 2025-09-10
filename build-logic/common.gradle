@@ -1,0 +1,77 @@
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "${project.modid}" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+
+    accessWidenerPath = file("src/main/resources/${project.modid}.accesswidener")
+}
+
+import groovy.json.JsonSlurper
+
+def configFile = rootProject.file("config.json")
+def configJson = new JsonSlurper().parse(configFile)
+
+def moduleName = project.name
+def moduleConfig = configJson[moduleName]
+
+if (moduleConfig == null) {
+    throw new GradleException("No config found for module '$moduleName' in config.json")
+}
+
+ext {
+    minecraft_version = moduleConfig.minecraft_version
+    mod_version = moduleConfig.mod_version
+
+    yarn_mappings = moduleConfig.yarn_mappings
+}
+
+version = mod_version
+
+dependencies {
+    // Core dependencies
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    if (yarn_mappings == null) {
+        mappings loom.officialMojangMappings()
+    } else {
+        mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
+    }
+
+    // You can add optional dependencies here if you want to use it across version
+}
+
+
+processResources {
+    inputs.property "version", project.version
+    filteringCharset "UTF-8"
+    filesMatching("fabric.mod.json") {
+        // Combine project.properties and project.ext properties
+        def allProperties = new HashMap()
+        allProperties.putAll(project.properties)
+        allProperties.putAll(project.ext.properties)
+
+        expand allProperties
+    }
+}
+
+// Java version compatibility
+def targetJavaVersion = project.java_version
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    if (targetJavaVersion >= (10 as String) || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(targetJavaVersion as Integer)
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    withSourcesJar()
+}
